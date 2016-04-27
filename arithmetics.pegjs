@@ -20,6 +20,7 @@
         return rest.reduce((prod, [op, num]) => { return eval(prod+op+num); },left);
     };
 
+    var ADT = {};
 }
 
 start =
@@ -27,18 +28,15 @@ start =
 
 expresion
     = value:assign {
-        console.log("assign:" + value);
         console.log(util.inspect(symbolTable,{ depth: null}));
         return value;
     }
 
     / value:ifthenelse {
-        console.log("IfthenElse");
         return value;
     }
 
     / value:additive {
-        console.log("Additive :" + value);
         return value;
     }
 
@@ -55,9 +53,6 @@ func
 
 ifthenelse
     = IF check:expresion THEN trueExp:expresion ELSE falseExp:expresion {
-        console.log("CHECK:" + check);
-        console.log("TRUE:" + trueExp);
-        console.log("FALSE:" + falseExp);
         if (check) {
             return trueExp;
         }
@@ -68,7 +63,9 @@ ifthenelse
 
 additive
     = left:multiplicative rest:(ADDOP multiplicative)* { return foldExpresion(left, rest); }
-    / multiplicative
+    / value:multiplicative {
+        return value;
+    }
 
 multiplicative
     = left:primary rest:(MULOP primary)* { return foldExpresion(left, rest); }
@@ -76,7 +73,12 @@ multiplicative
 
 primary
     = integer
-    / id:ID { return symbolTable[id]; }
+    / id:ID {
+        if (symbolTable[id] === undefined) {
+            error("Use a variable but NOT is found in symbol table.\n\t"
+                  + "Line: " + location().start.line + ", Column: " + location().start.column);
+        }
+        return symbolTable[id]; }
     /* / id:ID (expresion _)* {  }*/
     / LEFTPAR additive:additive RIGHTPAR { return additive; }
 
