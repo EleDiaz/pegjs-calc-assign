@@ -1,19 +1,26 @@
 /*
  * Classic example grammar, which recognizes simple arithmetic expressions like
  * "2*(3+4)". The parser generated from this grammar then computes their value.
+ *
+ * pegjs --trace arithmetics.pegjs; node --harmony_destructuring main.js
  */
 
 /*
-
-  Como controlar la identacion?
-  Los identificadores no pueden ser palabras reservadas del lenguaje // esto es importante
-
+  - Como controlar la identacion?
+  - Los identificadores no pueden ser palabras reservadas del lenguaje // esto es importante
+  - Hacer que el lenguaje solo use expresiones
+  - Impedir que se sobreescriban variables(todo constante)
+  - TypeSystem?
+  - Generar un ADT, eliminar el analizador semántico "directo"
 */
 {
     var util = require('util');
+    // Clase symbolTable para manejar la busqueda de simbolos en la pila de tablas
     var symbolTable = {
         PI: Math.PI
     };
+    // console.log(util.inspect(symbolTable,{ depth: null}));
+
 
     // :: Int -> [(String, Int)] -> Int
     function foldExpresion(left, rest) {
@@ -24,21 +31,21 @@
 }
 
 start =
-    expresion
+    listExpresions
+
+listExpresions
+    = left:expresion rest:(SEPEXP expresion)* {
+        return rest.reduce((acc, [shit, exp]) => {
+            acc.push(exp);      // Javascript se comporta mal con los metodos de insercion
+            return acc;
+        }, [left]);
+    }
 
 expresion
-    = value:assign {
-        console.log(util.inspect(symbolTable,{ depth: null}));
-        return value;
-    }
+    = assign
+    / ifthenelse
+    / additive
 
-    / value:ifthenelse {
-        return value;
-    }
-
-    / value:additive {
-        return value;
-    }
 
 assign
     = id:ID ASSIGN a:expresion {
@@ -47,8 +54,11 @@ assign
     }
 
 func
-    = name:ID param:ID* ASSIGN expresion {
-        symbolTable[id] =  {}
+    = name:ID parameters:ID* ASSIGN expresion {
+        symbolTable[id] =  { params: parameters, symbolTable: {} }
+        // Como represento la funcion? nombrefuncion param param = contenido_funcion
+        // { name: String, param: [String], symbolTable: { vars: value }}
+        // TODO: usar CPS? clase (Num => Num) con la operaciones entre números
     }
 
 ifthenelse
@@ -102,3 +112,4 @@ ASSIGN = _ '=' _
 IF = _ 'if' _
 THEN = _ 'then' _
 ELSE = _ 'else' _
+SEPEXP = _ ';' _
